@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/merge.js": {
-      "runtime": "nodejs"
+      "runtime": "nodejs18.x"
     }
   }
 }
