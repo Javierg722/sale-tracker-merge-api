@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/merge.js": {
+      "runtime": "nodejs"
+    }
+  }
+}
