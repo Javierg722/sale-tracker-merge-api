@@ -1,6 +1,7 @@
 from io import BytesIO
 from fastapi import FastAPI, UploadFile, File, Form, Response, HTTPException
 from openpyxl import load_workbook
+from datetime import datetime
 import json
 
 app = FastAPI()
@@ -22,13 +23,17 @@ INPUT_COLUMNS = {
 def clear_cell(ws, cell_ref: str):
     ws[cell_ref].value = None
 
+def parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except:
+        return None
+
 @app.get("/")
 def root():
     return {"status": "ok"}
-
-@app.get("/api/merge")
-def merge_get():
-    raise HTTPException(status_code=405, detail="Method not allowed")
 
 @app.post("/api/merge")
 async def merge_post(
@@ -42,31 +47,44 @@ async def merge_post(
 
         content = await workbook.read()
         wb = load_workbook(BytesIO(content))
+
         if SHEET_NAME not in wb.sheetnames:
             raise HTTPException(status_code=400, detail=f'Sheet "{SHEET_NAME}" not found')
 
         ws = wb[SHEET_NAME]
 
-        # Clear only the app-owned input columns in rows 6:505
+        # Force Excel FULL recalculation
+        wb.calculation_properties.fullCalcOnLoad = True
+
+        # Clear input cells
         for row_num in range(6, 506):
             for col in INPUT_COLUMNS.values():
                 clear_cell(ws, f"{col}{row_num}")
 
-        # Write rows back into the template
+        # Write rows
         for i, row in enumerate(rows, start=START_ROW):
             if i > 505:
-                raise HTTPException(status_code=400, detail="Too many rows for workbook template")
+                raise HTTPException(status_code=400, detail="Too many rows")
 
             for field, col in INPUT_COLUMNS.items():
                 value = row.get(field)
-
-                if value is None or value == "":
+                if value in (None, ""):
                     continue
 
                 cell = ws[f"{col}{i}"]
 
+                # NUMBERS
                 if field in ("sharesBought", "costPerShare", "sharesSold", "salePricePerShare"):
                     cell.value = float(value)
+
+                # DATES (CRITICAL FIX)
+                elif field in ("buyDate", "sellDate"):
+                    dt = parse_date(value)
+                    if dt:
+                        cell.value = dt
+                        cell.number_format = "m/d/yyyy"
+
+                # TEXT
                 else:
                     cell.value = value
 
