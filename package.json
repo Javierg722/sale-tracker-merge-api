@@ -1,9 +1,0 @@
-{
-  "name": "sale-tracker-merge-api",
-  "private": true,
-  "version": "1.0.0",
-  "dependencies": {
-    "formidable": "^3.5.1",
-    "xlsx": "^0.18.5"
-  }
-}
