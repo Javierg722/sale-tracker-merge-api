@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 import json
 import traceback
 from openpyxl import load_workbook
@@ -27,7 +27,6 @@ async def merge(
 
         for i, row in enumerate(rows):
             excel_row = START_ROW + i
-
             ws[f"E{excel_row}"] = row.get("ticker")
             ws[f"G{excel_row}"] = row.get("buyDate")
             ws[f"H{excel_row}"] = row.get("sharesBought")
@@ -48,7 +47,10 @@ async def merge(
         )
 
     except Exception as e:
-        return {
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": str(e),
+                "trace": traceback.format_exc()
+            }
+        )
